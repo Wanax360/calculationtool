@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: royalsys-db
+    environment:
+      POSTGRES_DB: royalsys
+      POSTGRES_USER: royalsys
+      POSTGRES_PASSWORD: royalsys
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U royalsys"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../royalsys-backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: royalsys-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: royalsys
+      DB_USER: royalsys
+      DB_PASS: royalsys
+      SERVER_PORT: 8080
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ../royalsys-frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: royalsys-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata:
